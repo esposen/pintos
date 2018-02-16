@@ -30,4 +30,4 @@ GDBMACROS="/home/YOURID/cmsc326/pintos/src/misc/gdb-macros"
 
 Pintos should run and load several threads in a QEMU terminal.
 
--i is changed
+-i is changed back
