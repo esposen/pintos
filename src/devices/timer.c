@@ -93,21 +93,15 @@ timer_sleep (int64_t ticks)
 
   struct thread *t = thread_current();
 
-  t->wakeUpTime = start + ticks;
+  t->ticksTillWake = ticks;
   
   ASSERT (intr_get_level () == INTR_ON);
 
   sleep_threads_push(t);
 
-  printf("Thread %d is sleeping until %d\n", t->tid, t->wakeUpTime);
-  
+  /*Block Tread until thread_tick(void)
+    in thread.c unlocks semaphore*/
   sema_down(&(t->sema));
-
-  printf("\tThread %d is WOKE\n", t->tid);
-
-
-  // while (timer_elapsed (start) < ticks) 
-  //   thread_yield ();
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be

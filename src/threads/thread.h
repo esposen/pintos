@@ -103,9 +103,10 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
 
-    struct semaphore sema;
+    /*Shared between thread.c and timer.c*/
+    struct semaphore sema;              /* Sleep thread semaphore */
+    int ticksTillWake;                  /* Remaing ticks until thread is woken */
 
-    int wakeUpTime;
   };
 
 /* If false (default), use round-robin scheduler.

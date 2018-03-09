@@ -127,23 +127,20 @@ thread_start (void)
 void
 thread_tick (void) 
 {
-
+	/*Loop through list of sleeping threads.*/
   struct list_elem *e;
   for (e = list_begin(&sleeping_list);
        e != list_end(&sleeping_list);
        e = list_next(e) ) {
   	struct thread *temp = list_entry(e, struct thread, sleepelem);
-  	if(timer_ticks() >= temp->wakeUpTime){
-  		printf("Thread %d is ready to wake up\n", temp->tid);
-  		temp->wakeUpTime = 0;
+  	/*Check if each thread is ready to wake */
+  	if(--(temp -> ticksTillWake)<= 0){
+  		/*Unblock and wake thread*/
   		list_remove (&(temp->sleepelem));
   		sema_up(&(temp->sema));
   	}
-  	else{
-  		  printf("Thread %d has %d ticks remaining\n", temp->tid, temp->wakeUpTime - timer_ticks());
-
-  	}
   }
+  
   struct thread *t = thread_current ();
 
   /* Update statistics. */
