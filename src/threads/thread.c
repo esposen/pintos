@@ -28,6 +28,10 @@ static struct list ready_list;
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
+/* List of all sleeping processes.  Processes are added to this list
+   when they first sleep and removed when they wake. */
+static struct list sleeping_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -92,6 +96,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init (&sleeping_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -122,6 +127,20 @@ thread_start (void)
 void
 thread_tick (void) 
 {
+	/*Loop through list of sleeping threads.*/
+  struct list_elem *e;
+  for (e = list_begin(&sleeping_list);
+       e != list_end(&sleeping_list);
+       e = list_next(e) ) {
+  	struct thread *temp = list_entry(e, struct thread, sleepelem);
+  	/*Check if each thread is ready to wake */
+  	if(--(temp -> sleepticks)<= 0){
+  		/*Unblock and wake thread*/
+  		list_remove (&(temp->sleepelem));
+  		sema_up(&(temp->sema));
+  	}
+  }
+  
   struct thread *t = thread_current ();
 
   /* Update statistics. */
@@ -464,6 +483,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
+  sema_init(&(t->sema),0);
+  
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
@@ -578,7 +599,73 @@ allocate_tid (void)
 
   return tid;
 }
-
+
+void sleep_threads_push(struct thread *t){
+	list_push_back(&sleeping_list, &(t->sleepelem));
+}
+
+/*
+  Exercise: Pintos Linked Lists
+
+  test_list demonstrates how to work with linked lists.
+  Should be removed from kernel after you play with it!!
+
+  1. Add this code at the end of thread.c
+  2. Call test_list at the end of thread_start().
+  3. Run "pintos run alarm-multiple".
+  3. Finish the for-loop to print out the elements in the list.
+  4. Find list code and figure out how list_entry works!
+  5. You should then return allocated memory in a reasonable manner.
+  6. Finally, remove these changes from thread.c when complete.
+
+*/
+
+// One element in the list
+struct mystruct {
+  char *word;
+  struct list_elem elem;
+};
+
+/*
+  Build a list and test that it works.
+
+
+int test_list() {
+  struct list wordlist;
+  char *stuff[] = {"The","rain","in","Spain","falls",
+		   "mainly","in","the","plain.",NULL};
+  int i;
+  struct list_elem *e;
+  
+  list_init(&wordlist);
+
+  if (list_empty(&wordlist)) printf("list is empty\n");
+  else printf("list has %d elements\n",list_size(&wordlist));
+
+  // Create linked list of mystructs.
+  for (i = 0; stuff[i] != NULL; i++) {
+    struct mystruct *s = (struct mystruct *) malloc(sizeof(struct mystruct));
+    s->word = stuff[i];
+    list_push_back (&wordlist, &s->elem); // onto end of list
+  }
+  if (list_empty(&wordlist)) printf("list is empty\n");
+  else printf("list has %d elements\n",list_size(&wordlist));
+
+  // Loop over list
+  for (e = list_begin(&wordlist);
+       e != list_end(&wordlist);
+       e = list_next(e) ) {
+    struct mystruct *s = list_entry(e, struct mystruct, elem);
+    printf("%s\n",s->word);
+    // TODO: Print out the items in the list.
+    // You need to find and read the list code to figure this out.
+    // You then also need to free the dynamically allocated memory!
+
+  }
+  
+  return (0);
+}
+*/
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);

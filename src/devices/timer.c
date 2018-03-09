@@ -88,12 +88,20 @@ timer_elapsed (int64_t then)
    be turned on. */
 void
 timer_sleep (int64_t ticks) 
-{
+{  
   int64_t start = timer_ticks ();
 
+  struct thread *t = thread_current();
+
+  t->sleepticks = ticks;
+  
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+
+  sleep_threads_push(t);
+
+  /*Block Tread until thread_tick(void)
+    in thread.c unlocks semaphore*/
+  sema_down(&(t->sema));
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
