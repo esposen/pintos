@@ -93,7 +93,7 @@ timer_sleep (int64_t ticks)
 
   struct thread *t = thread_current();
 
-  t->ticksTillWake = ticks;
+  t->sleepticks = ticks;
   
   ASSERT (intr_get_level () == INTR_ON);
 

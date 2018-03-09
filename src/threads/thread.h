@@ -105,7 +105,7 @@ struct thread
 
     /*Shared between thread.c and timer.c*/
     struct semaphore sema;              /* Sleep thread semaphore */
-    int ticksTillWake;                  /* Remaing ticks until thread is woken */
+    int sleepticks;                     /* Remaing ticks until thread is woken */
 
   };
 

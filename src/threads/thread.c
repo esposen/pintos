@@ -134,7 +134,7 @@ thread_tick (void)
        e = list_next(e) ) {
   	struct thread *temp = list_entry(e, struct thread, sleepelem);
   	/*Check if each thread is ready to wake */
-  	if(--(temp -> ticksTillWake)<= 0){
+  	if(--(temp -> sleepticks)<= 0){
   		/*Unblock and wake thread*/
   		list_remove (&(temp->sleepelem));
   		sema_up(&(temp->sema));
