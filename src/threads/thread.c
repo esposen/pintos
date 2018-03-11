@@ -74,7 +74,7 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
-
+void sleep_threads_push(struct thread *t);
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -134,12 +134,14 @@ thread_tick (void)
        e = list_next(e) ) {
   	struct thread *temp = list_entry(e, struct thread, sleepelem);
   	/*Check if each thread is ready to wake */
+
   	if(--(temp -> sleepticks)<= 0){
   		/*Unblock and wake thread*/
   		list_remove (&(temp->sleepelem));
   		sema_up(&(temp->sema));
   	}
   }
+
   
   struct thread *t = thread_current ();
 
@@ -220,6 +222,13 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  /*Reschedule if priority of created thread is
+  	larger than priority of current running thread*/
+  if(t->priority > thread_current() -> priority){
+		//enum intr_level old_level;
+		thread_yield();
+  }
+
   return tid;
 }
 
@@ -253,7 +262,6 @@ thread_unblock (struct thread *t)
   enum intr_level old_level;
 
   ASSERT (is_thread (t));
-
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
@@ -513,8 +521,32 @@ next_thread_to_run (void)
 {
   if (list_empty (&ready_list))
     return idle_thread;
-  else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  else{
+
+  	struct thread *next;
+  	int highest_priority = -1;
+  	struct list_elem *e;
+
+  	/*Find thread with highest priority*/
+  	for (e = list_begin(&ready_list);
+       e != list_end(&ready_list);
+       e = list_next(e)){
+
+  		struct thread *temp = list_entry(e, struct thread, elem);
+
+  		if(temp->priority > highest_priority){
+  			next = temp;
+  			highest_priority = temp->priority;
+  		}
+
+  	}
+
+  	/*Remove highest priority thread from ready list*/
+  	list_remove(&(next->elem));
+
+  	return next;
+    //return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  }
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -600,72 +632,11 @@ allocate_tid (void)
   return tid;
 }
 
+/*Called by timer.c to add current thread to 
+	list of sleeping threads*/
 void sleep_threads_push(struct thread *t){
 	list_push_back(&sleeping_list, &(t->sleepelem));
 }
 
-/*
-  Exercise: Pintos Linked Lists
 
-  test_list demonstrates how to work with linked lists.
-  Should be removed from kernel after you play with it!!
-
-  1. Add this code at the end of thread.c
-  2. Call test_list at the end of thread_start().
-  3. Run "pintos run alarm-multiple".
-  3. Finish the for-loop to print out the elements in the list.
-  4. Find list code and figure out how list_entry works!
-  5. You should then return allocated memory in a reasonable manner.
-  6. Finally, remove these changes from thread.c when complete.
-
-*/
-
-// One element in the list
-struct mystruct {
-  char *word;
-  struct list_elem elem;
-};
-
-/*
-  Build a list and test that it works.
-
-
-int test_list() {
-  struct list wordlist;
-  char *stuff[] = {"The","rain","in","Spain","falls",
-		   "mainly","in","the","plain.",NULL};
-  int i;
-  struct list_elem *e;
-  
-  list_init(&wordlist);
-
-  if (list_empty(&wordlist)) printf("list is empty\n");
-  else printf("list has %d elements\n",list_size(&wordlist));
-
-  // Create linked list of mystructs.
-  for (i = 0; stuff[i] != NULL; i++) {
-    struct mystruct *s = (struct mystruct *) malloc(sizeof(struct mystruct));
-    s->word = stuff[i];
-    list_push_back (&wordlist, &s->elem); // onto end of list
-  }
-  if (list_empty(&wordlist)) printf("list is empty\n");
-  else printf("list has %d elements\n",list_size(&wordlist));
-
-  // Loop over list
-  for (e = list_begin(&wordlist);
-       e != list_end(&wordlist);
-       e = list_next(e) ) {
-    struct mystruct *s = list_entry(e, struct mystruct, elem);
-    printf("%s\n",s->word);
-    // TODO: Print out the items in the list.
-    // You need to find and read the list code to figure this out.
-    // You then also need to free the dynamically allocated memory!
-
-  }
-  
-  return (0);
-}
-*/
-/* Offset of `stack' member within `struct thread'.
-   Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
