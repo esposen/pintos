@@ -74,7 +74,10 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
-void sleep_threads_push(struct thread *t);
+void thread_sleeping_list_push(struct thread *t);
+bool thread_compare(const struct list_elem *a,
+                     const struct list_elem *b,
+                     void *aux);
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -521,32 +524,9 @@ next_thread_to_run (void)
 {
   if (list_empty (&ready_list))
     return idle_thread;
-  else{
-
-  	struct thread *next;
-  	int highest_priority = -1;
-  	struct list_elem *e;
-
-  	/*Find thread with highest priority*/
-  	for (e = list_begin(&ready_list);
-       e != list_end(&ready_list);
-       e = list_next(e)){
-
-  		struct thread *temp = list_entry(e, struct thread, elem);
-
-  		if(temp->priority > highest_priority){
-  			next = temp;
-  			highest_priority = temp->priority;
-  		}
-
-  	}
-
-  	/*Remove highest priority thread from ready list*/
-  	list_remove(&(next->elem));
-
-  	return next;
-    //return list_entry (list_pop_front (&ready_list), struct thread, elem);
-  }
+  else
+    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -568,6 +548,7 @@ next_thread_to_run (void)
 void
 thread_schedule_tail (struct thread *prev)
 {
+
   struct thread *cur = running_thread ();
   
   ASSERT (intr_get_level () == INTR_OFF);
@@ -605,6 +586,8 @@ thread_schedule_tail (struct thread *prev)
 static void
 schedule (void) 
 {
+	list_sort(&ready_list, &thread_compare, NULL);
+
   struct thread *cur = running_thread ();
   struct thread *next = next_thread_to_run ();
   struct thread *prev = NULL;
@@ -634,8 +617,20 @@ allocate_tid (void)
 
 /*Called by timer.c to add current thread to 
 	list of sleeping threads*/
-void sleep_threads_push(struct thread *t){
+void thread_sleeping_list_push(struct thread *t){
 	list_push_back(&sleeping_list, &(t->sleepelem));
+}
+
+bool thread_compare(const struct list_elem *a,
+                     const struct list_elem *b,
+                     void *aux){
+	struct thread *threadA = list_entry(a, struct thread, elem);
+	struct thread *threadB = list_entry(b, struct thread, elem);
+
+	if(threadA->priority > threadB->priority)
+		return true;
+
+	return false;
 }
 
 

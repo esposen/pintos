@@ -1,3 +1,6 @@
+make clean
+make
+
 rm build/tests/threads/priority-change.result
 rm build/tests/threads/priority-donate-one.result
 rm build/tests/threads/priority-donate-multiple.result

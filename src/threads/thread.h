@@ -145,6 +145,10 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-void sleep_threads_push(struct thread *t);
+void thread_sleeping_list_push(struct thread *t);
+
+bool thread_compare(const struct list_elem *a,
+                     const struct list_elem *b,
+                     void *aux);
 
 #endif /* threads/thread.h */

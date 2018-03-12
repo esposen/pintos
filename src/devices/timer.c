@@ -97,7 +97,7 @@ timer_sleep (int64_t ticks)
   
   ASSERT (intr_get_level () == INTR_ON);
 
-  sleep_threads_push(t);
+  thread_sleeping_list_push(t);
 
   /*Block Tread until thread_tick(void)
     in thread.c unlocks semaphore*/
