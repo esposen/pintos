@@ -227,7 +227,7 @@ thread_create (const char *name, int priority,
 
   /*Reschedule if priority of created thread is
   	larger than priority of current running thread*/
-  if(t->priority > thread_current() -> priority){
+  if(t->priority > thread_current()->priority){
 		//enum intr_level old_level;
 		thread_yield();
   }
@@ -267,7 +267,7 @@ thread_unblock (struct thread *t)
   ASSERT (is_thread (t));
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  list_insert_ordered (&ready_list, &t->elem, &thread_compare, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -338,7 +338,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+  	list_insert_ordered (&ready_list, &cur->elem, &thread_compare, NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -365,7 +365,12 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+	thread_current()->priority = new_priority;
+	//Update ready list due to changed priority;
+	list_sort(&ready_list, &thread_compare, NULL);
+	//Yield in case new highest priority
+  thread_yield();
+
 }
 
 /* Returns the current thread's priority. */
@@ -586,8 +591,6 @@ thread_schedule_tail (struct thread *prev)
 static void
 schedule (void) 
 {
-	list_sort(&ready_list, &thread_compare, NULL);
-
   struct thread *cur = running_thread ();
   struct thread *next = next_thread_to_run ();
   struct thread *prev = NULL;
@@ -621,6 +624,10 @@ void thread_sleeping_list_push(struct thread *t){
 	list_push_back(&sleeping_list, &(t->sleepelem));
 }
 
+/* Compare function for list_sort
+	 returns true if A > B
+	 Creates list of threads with in decending order
+	 	of priority */
 bool thread_compare(const struct list_elem *a,
                      const struct list_elem *b,
                      void *aux){
