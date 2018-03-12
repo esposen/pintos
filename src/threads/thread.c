@@ -367,9 +367,9 @@ thread_set_priority (int new_priority)
 {
 	thread_current()->priority = new_priority;
 	//Update ready list due to changed priority;
-	list_sort(&ready_list, &thread_compare, NULL);
+	//list_sort(&ready_list, &thread_compare, NULL);
 	//Yield in case new highest priority
-  thread_yield();
+  //thread_yield();
 
 }
 
@@ -613,7 +613,7 @@ allocate_tid (void)
 
   lock_acquire (&tid_lock);
   tid = next_tid++;
-  lock_release (&tid_lock);
+  lock_release (&tid_lock); 
 
   return tid;
 }
