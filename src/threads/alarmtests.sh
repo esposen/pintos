@@ -1,6 +1,9 @@
 #!/bin/bash
+make clear
+make
+
 rm build/tests/threads/alarm-zero.result
-rm build/tests/threads/alarm-single.result
+rm build/tests/threads/alarm-single.results
 rm build/tests/threads/alarm-multiple.result
 rm build/tests/threads/alarm-negative.result
 rm build/tests/threads/alarm-simultaneous.result

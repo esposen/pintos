@@ -74,7 +74,10 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
-void sleep_threads_push(struct thread *t);
+void thread_sleeping_list_push(struct thread *t);
+bool thread_compare(const struct list_elem *a,
+                     const struct list_elem *b,
+                     void *aux);
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -224,7 +227,7 @@ thread_create (const char *name, int priority,
 
   /*Reschedule if priority of created thread is
   	larger than priority of current running thread*/
-  if(t->priority > thread_current() -> priority){
+  if(t->priority > thread_current()->priority){
 		//enum intr_level old_level;
 		thread_yield();
   }
@@ -264,7 +267,7 @@ thread_unblock (struct thread *t)
   ASSERT (is_thread (t));
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  list_insert_ordered (&ready_list, &t->elem, &thread_compare, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -335,7 +338,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+  	list_insert_ordered (&ready_list, &cur->elem, &thread_compare, NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -362,7 +365,12 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+	thread_current()->priority = new_priority;
+	//Update ready list due to changed priority;
+	list_sort(&ready_list, &thread_compare, NULL);
+	//Yield in case new highest priority
+  thread_yield();
+
 }
 
 /* Returns the current thread's priority. */
@@ -521,32 +529,9 @@ next_thread_to_run (void)
 {
   if (list_empty (&ready_list))
     return idle_thread;
-  else{
-
-  	struct thread *next;
-  	int highest_priority = -1;
-  	struct list_elem *e;
-
-  	/*Find thread with highest priority*/
-  	for (e = list_begin(&ready_list);
-       e != list_end(&ready_list);
-       e = list_next(e)){
-
-  		struct thread *temp = list_entry(e, struct thread, elem);
-
-  		if(temp->priority > highest_priority){
-  			next = temp;
-  			highest_priority = temp->priority;
-  		}
-
-  	}
-
-  	/*Remove highest priority thread from ready list*/
-  	list_remove(&(next->elem));
-
-  	return next;
-    //return list_entry (list_pop_front (&ready_list), struct thread, elem);
-  }
+  else
+    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -568,6 +553,7 @@ next_thread_to_run (void)
 void
 thread_schedule_tail (struct thread *prev)
 {
+
   struct thread *cur = running_thread ();
   
   ASSERT (intr_get_level () == INTR_OFF);
@@ -627,15 +613,31 @@ allocate_tid (void)
 
   lock_acquire (&tid_lock);
   tid = next_tid++;
-  lock_release (&tid_lock);
+  lock_release (&tid_lock); 
 
   return tid;
 }
 
 /*Called by timer.c to add current thread to 
 	list of sleeping threads*/
-void sleep_threads_push(struct thread *t){
+void thread_sleeping_list_push(struct thread *t){
 	list_push_back(&sleeping_list, &(t->sleepelem));
+}
+
+/* Compare function for list_sort
+	 returns true if A > B
+	 Creates list of threads with in decending order
+	 	of priority */
+bool thread_compare(const struct list_elem *a,
+                     const struct list_elem *b,
+                     void *aux){
+	struct thread *threadA = list_entry(a, struct thread, elem);
+	struct thread *threadB = list_entry(b, struct thread, elem);
+
+	if(threadA->priority > threadB->priority)
+		return true;
+
+	return false;
 }
 
 
