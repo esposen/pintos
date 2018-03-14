@@ -102,10 +102,7 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
-
-    /*Shared between thread.c and timer.c*/
-    struct semaphore sema;              /* Sleep thread semaphore */
-    int sleepticks;                     /* Remaing ticks until thread is woken */
+    int waketick;                     /* Remaing ticks until thread is woken */
 
   };
 
@@ -144,9 +141,6 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-
-void thread_sleeping_list_push(struct thread *t);
-
 bool thread_compare(const struct list_elem *a,
                      const struct list_elem *b,
                      void *aux);

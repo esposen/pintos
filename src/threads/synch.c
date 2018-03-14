@@ -68,10 +68,7 @@ sema_down (struct semaphore *sema)
   old_level = intr_disable ();
   while (sema->value == 0) 
     {
-      list_insert_ordered (&sema->waiters, &thread_current()->elem, &thread_compare, NULL);
-
-      //list_push_back (&sema->waiters, &thread_current ()->elem);
-      
+      list_insert_ordered (&sema->waiters, &thread_current()->elem, &thread_compare, NULL);      
       thread_block ();
     }
   sema->value--;
@@ -122,7 +119,7 @@ sema_up (struct semaphore *sema)
 
   sema->value++;
   intr_set_level (old_level);
-  //thread_yield();//feels like a messy solution !!!!!!!!!!!!! causes all alarm test to fail
+  thread_yield();
 }
 
 static void sema_test_helper (void *sema_);
