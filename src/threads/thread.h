@@ -89,8 +89,10 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    int oldpriority;
     struct list_elem allelem;           /* List element for all threads list. */
     struct list_elem sleepelem;         /* List element for sleep threads list. */
+    struct list_elem donorelem;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -104,6 +106,9 @@ struct thread
     unsigned magic;                     /* Detects stack overflow. */
     int waketick;                     /* Remaing ticks until thread is woken */
 
+    struct thread *lockedby;
+    struct list possibledonors;
+    struct lock *blocklock;
   };
 
 /* If false (default), use round-robin scheduler.

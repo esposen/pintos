@@ -191,6 +191,10 @@ thread_create (const char *name, int priority,
   kf->function = function;
   kf->aux = aux;
 
+  t->lockedby = NULL;
+  t->blocklock = NULL;
+  list_init(&t->possibledonors);
+
   /* Stack frame for switch_entry(). */
   ef = alloc_frame (t, sizeof *ef);
   ef->eip = (void (*) (void)) kernel_thread;
@@ -316,6 +320,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
+  	//printf("about to order in yield\n");
   	list_insert_ordered (&ready_list, &cur->elem, &thread_compare, NULL);
   cur->status = THREAD_READY;
   schedule ();
@@ -343,11 +348,37 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
+
+//   thread_current()->priority = new_priority;
+//   thread_current()->oldpriority = new_priority;
+  
+
+//   // enum intr_level old_level = intr_disable();
+
+//   // if(list_empty(&thread_current()->possibledonors) ||
+//   //   new_priority > thread_current()->priority){
+//   //   thread_current()->priority = new_priority;
+//   //   thread_current()->oldpriority = new_priority;
+//   // }
+//   // else{
+//   //     thread_current()->priority = new_priority;
+//   // }
+
+// 	//Update ready list due to changed priority;
+// 	list_sort(&ready_list, &thread_compare, NULL);
+
+//   //intr_set_level(old_level);
+
+//   //Yield if new priority is no longer highest priority
+
 	thread_current()->priority = new_priority;
 	//Update ready list due to changed priority;
 	list_sort(&ready_list, &thread_compare, NULL);
-	//Yield in case new highest priority
-  thread_yield();
+	// Yield in case new highest priority
+    if(!list_empty(&ready_list) &&
+    list_entry(list_front(&ready_list), struct thread,elem)->priority >
+    thread_current()->priority)
+    	thread_yield();
 
 }
 
@@ -567,6 +598,7 @@ thread_schedule_tail (struct thread *prev)
 static void
 schedule (void) 
 {
+  //printf("in schedule\n");
   struct thread *cur = running_thread ();
   struct thread *next = next_thread_to_run ();
   struct thread *prev = NULL;
