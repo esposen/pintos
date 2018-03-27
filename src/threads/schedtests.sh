@@ -9,10 +9,10 @@ rm build/tests/threads/priority-change.result
 # rm build/tests/threads/priority-donate-sema.result
 # rm build/tests/threads/priority-donate-lower.result
 # rm build/tests/threads/priority-donate-chain.result
-# rm build/tests/threads/priority-condvar.result
-# rm build/tests/threads/priority-fifo.result
-# rm build/tests/threads/priority-preempt.result
-# rm build/tests/threads/priority-sema.result
+rm build/tests/threads/priority-condvar.result
+rm build/tests/threads/priority-fifo.result
+rm build/tests/threads/priority-preempt.result
+rm build/tests/threads/priority-sema.result
 
 
 

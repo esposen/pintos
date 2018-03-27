@@ -114,7 +114,7 @@ sema_up (struct semaphore *sema)
   enum intr_level old_level;
 
   ASSERT (sema != NULL);
-
+  
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters))
     thread_unblock (list_entry (list_pop_front (&sema->waiters),
@@ -122,7 +122,7 @@ sema_up (struct semaphore *sema)
 
   sema->value++;
   intr_set_level (old_level);
-  //thread_yield();//feels like a messy solution !!!!!!!!!!!!! causes all alarm test to fail
+  if(!intr_context()) thread_yield();
 }
 
 static void sema_test_helper (void *sema_);
@@ -201,8 +201,27 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-  sema_down (&lock->semaphore);
+  // Returns False if can sema_down
+  if (!sema_try_down(&lock->semaphore)){
+    
+    int curr_pri = thread_current()->priority;
+    int holder_pri = lock->holder->priority;
+    //int i=0;
+    //thread_current()->blocker = t;
+    
+    // for(t = lock->holder; t != NULL; t = t->blocker){}
+    
+    if (curr_pri > holder_pri){ 
+      //MUST DONATE PRIORITY
+      lock->holder->priority = curr_pri;
+    }
+    sema_down(&lock->semaphore);    
+  }
+  
+  // Acquire Lock
   lock->holder = thread_current ();
+  // After becoming the lock holder, save original priority
+  lock->lockholderpri = thread_current()->priority;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -237,6 +256,8 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   lock->holder = NULL;
+  //before releasing lock, set priority to original priority
+  thread_current()->priority = lock->lockholderpri;
   sema_up (&lock->semaphore);
 }
 

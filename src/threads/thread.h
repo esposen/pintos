@@ -95,6 +95,8 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+    struct thread *blocker;             /* Thread which is blocking this thread */
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -106,7 +108,7 @@ struct thread
     /*Shared between thread.c and timer.c*/
     struct semaphore sema;              /* Sleep thread semaphore */
     int sleepticks;                     /* Remaing ticks until thread is woken */
-
+    
   };
 
 /* If false (default), use round-robin scheduler.
