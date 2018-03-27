@@ -221,6 +221,7 @@ lock_acquire (struct lock *lock)
   
   // Acquire Lock
   lock->holder = thread_current ();
+  lock->holder->haslocks++;
   // After becoming the lock holder, save original priority
   lock->lockholderpri = thread_current()->priority;
 }
@@ -256,9 +257,12 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
+  lock->holder->haslocks--;
+  if(lock->holder->haslocks == 0)
+    lock->holder->priority = lock->holder->altpriority;
   lock->holder = NULL;
   //before releasing lock, set priority to original priority
-  thread_current()->priority = lock->lockholderpri;
+  // thread_current()->priority = lock->lockholderpri;
   sema_up (&lock->semaphore);
 }
 

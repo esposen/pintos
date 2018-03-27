@@ -1,4 +1,6 @@
 #!/bin/bash
+
+make clean
 make
 
 rm build/tests/threads/alarm-zero.result
@@ -31,11 +33,11 @@ make build/tests/threads/alarm-priority.result
 
 
 make build/tests/threads/priority-donate-one.result
-make build/tests/threads/priority-donate-multiple.result
-make build/tests/threads/priority-donate-multiple2.result
+make build/tests/threads/priority-donate-multiple.result 	#FAIL
+make build/tests/threads/priority-donate-multiple2.result 	#FAIL
 make build/tests/threads/priority-donate-nest.result
-make build/tests/threads/priority-donate-sema.result
-make build/tests/threads/priority-donate-lower.result
+make build/tests/threads/priority-donate-sema.result 		#FAIL
+make build/tests/threads/priority-donate-lower.result 		#FAIL
 make build/tests/threads/priority-donate-chain.result
 
 make build/tests/threads/priority-condvar.result
