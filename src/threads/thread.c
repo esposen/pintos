@@ -191,10 +191,6 @@ thread_create (const char *name, int priority,
   kf->function = function;
   kf->aux = aux;
 
-  t->lockedby = NULL;
-  t->blocklock = NULL;
-  list_init(&t->possibledonors);
-
   /* Stack frame for switch_entry(). */
   ef = alloc_frame (t, sizeof *ef);
   ef->eip = (void (*) (void)) kernel_thread;
