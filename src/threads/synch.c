@@ -108,7 +108,7 @@ sema_try_down (struct semaphore *sema)
 void
 sema_up (struct semaphore *sema) 
 {
-
+	enum intr_level old_level;
   ASSERT (sema != NULL);
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters)){
@@ -120,6 +120,7 @@ sema_up (struct semaphore *sema)
 
   sema->value++;
   intr_set_level (old_level);
+  //Don't yield if called from an interrupt handler
   if(!intr_context()) thread_yield();
 }
 
@@ -205,11 +206,9 @@ lock_acquire (struct lock *lock)
     thread_current()->blocker = lock;
 
     struct thread *t = thread_current();
-    struct lock *curlock = lock;
 
     while(t->blocker != NULL){
     	if(t->priority > t->blocker->holder->priority){
-	  //printf("1 holder priority: %i \t t-priority; %i \n",t->blocker->holder->priority, t->priority);
 	  t->blocker->holder->priority = t->priority;
 	  t = t->blocker->holder;
     	}
