@@ -28,10 +28,6 @@ static struct list ready_list;
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
-/* List of all sleeping processes.  Processes are added to this list
-   when they first sleep and removed when they wake. */
-static struct list sleeping_list;
-
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -74,7 +70,6 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
-void thread_sleeping_list_push(struct thread *t);
 bool thread_compare(const struct list_elem *a,
                      const struct list_elem *b,
                      void *aux);
@@ -99,8 +94,6 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
-  list_init (&sleeping_list);
-
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -130,21 +123,6 @@ thread_start (void)
 void
 thread_tick (void) 
 {
-	/*Loop through list of sleeping threads.*/
-  struct list_elem *e;
-  for (e = list_begin(&sleeping_list);
-       e != list_end(&sleeping_list);
-       e = list_next(e) ) {
-  	struct thread *temp = list_entry(e, struct thread, sleepelem);
-  	/*Check if each thread is ready to wake */
-
-  	if(--(temp -> sleepticks)<= 0){
-  		/*Unblock and wake thread*/
-  		list_remove (&(temp->sleepelem));
-  		sema_up(&(temp->sema));
-  	}
-  }
-
   
   struct thread *t = thread_current ();
 
@@ -338,6 +316,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
+  	//printf("about to order in yield\n");
   	list_insert_ordered (&ready_list, &cur->elem, &thread_compare, NULL);
   cur->status = THREAD_READY;
   schedule ();
@@ -365,6 +344,7 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
+
   thread_current()->altpriority = new_priority;
 
   if(list_empty(&thread_current()->locksheld)) {
@@ -605,6 +585,7 @@ thread_schedule_tail (struct thread *prev)
 static void
 schedule (void) 
 {
+  //printf("in schedule\n");
   struct thread *cur = running_thread ();
   struct thread *next = next_thread_to_run ();
   struct thread *prev = NULL;
@@ -632,11 +613,6 @@ allocate_tid (void)
   return tid;
 }
 
-/*Called by timer.c to add current thread to 
-	list of sleeping threads*/
-void thread_sleeping_list_push(struct thread *t){
-	list_push_back(&sleeping_list, &(t->sleepelem));
-}
 
 /* Compare function for list_sort
 	 returns true if A > B
