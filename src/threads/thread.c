@@ -367,7 +367,7 @@ thread_set_priority (int new_priority)
 {
   thread_current()->altpriority = new_priority;
 
-  if(thread_current()->haslocks == 0) {
+  if(list_empty(&thread_current()->locksheld)) {
     thread_current()->priority = new_priority;
     //Update ready list due to changed priority;
     list_sort(&ready_list, &thread_compare, NULL);
@@ -510,10 +510,9 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->altpriority = priority;
-  t->haslocks = 0;
   t->magic = THREAD_MAGIC;
   t->blocker = NULL;
-
+  list_init(&t->locksheld);
   sema_init(&(t->sema),0);
   
   old_level = intr_disable ();

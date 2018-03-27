@@ -204,14 +204,15 @@ lock_acquire (struct lock *lock)
   // Returns False if can sema_down
   if (!sema_try_down(&lock->semaphore)){
     
-    thread_current()->blocker = lock->holder;
+    thread_current()->blocker = lock;
 
     struct thread *t = thread_current();
+    struct lock *curlock = lock;
 
     while(t->blocker != NULL){
-    	if(t->priority > t->blocker->priority){
-    		t->blocker->priority = t->priority;
-    		t= t->blocker;
+    	if(t->priority > t->blocker->holder->priority){
+    		t->blocker->holder->priority = t->priority;
+     		t = t->blocker->holder;
     	}
     	else break;
     }
@@ -219,9 +220,11 @@ lock_acquire (struct lock *lock)
     sema_down(&lock->semaphore);    
   }
   
-  // Acquire Lock
+  // Acquire Lock and save in lock list held by thread
   lock->holder = thread_current ();
-  lock->holder->haslocks++;
+  list_push_back(&thread_current()->locksheld, &lock->lockelem);
+  thread_current()->blocker = NULL;
+
   // After becoming the lock holder, save original priority
   lock->lockholderpri = thread_current()->priority;
 }
@@ -257,11 +260,41 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  lock->holder->haslocks--;
-  if(lock->holder->haslocks == 0)
-    lock->holder->priority = lock->holder->altpriority;
+
+  list_remove(&lock->lockelem);
+
+  struct thread *curthread = thread_current();
+
+  if(list_empty(&curthread->locksheld)){
+  	//not blocking any thread return priority to old priority
+    curthread->priority = curthread->altpriority;
+  }
+  else {
+  	//still holding locks
+  	//check of those locks are blocking threads
+  	//check for donation from blocked threads
+  	struct list_elem *l; //for looping through thread->locksheld
+  	struct list_elem *w; //for looping through semaphore->waiters
+  	struct lock *curlock;
+  	struct thread *waiterthread;
+  	int highestpriority = curthread ->altpriority;
+  	for (l = list_begin(&curthread->locksheld);
+       l != list_end(&curthread->locksheld);
+       l = list_next(l) ){
+
+  		curlock = list_entry(l, struct lock, lockelem);
+
+  		for(w = list_begin(&curlock->semaphore.waiters);
+  			w != list_end(&curlock->semaphore.waiters);
+  			w = list_next(w)){
+  			waiterthread = list_entry(w, struct thread, elem);
+  			if(waiterthread->priority>highestpriority)
+  				highestpriority = waiterthread->priority;
+  		}
+  	}
+  	curthread->priority = highestpriority;
+  }
   lock->holder = NULL;
-  //before releasing lock, set priority to original priority
   // thread_current()->priority = lock->lockholderpri;
   sema_up (&lock->semaphore);
 }

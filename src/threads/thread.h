@@ -90,14 +90,13 @@ struct thread
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
     int altpriority;                    /* Saves priority when a lock is held */
-    int haslocks;                       /* Number of locks the thread currently holds */
     struct list_elem allelem;           /* List element for all threads list. */
     struct list_elem sleepelem;         /* List element for sleep threads list. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-
-    struct thread *blocker;             /* Thread which is blocking this thread */
+    struct list locksheld;              /* List of locks held by thread */
+    struct lock *blocker;             /* Lock which is blocking this thread */
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
