@@ -349,37 +349,16 @@ void
 thread_set_priority (int new_priority) 
 {
 
-//   thread_current()->priority = new_priority;
-//   thread_current()->oldpriority = new_priority;
-  
+  thread_current()->altpriority = new_priority;
 
-//   // enum intr_level old_level = intr_disable();
+  if(list_empty(&thread_current()->locksheld)) {
+    thread_current()->priority = new_priority;
+    //Update ready list due to changed priority;
+    list_sort(&ready_list, &thread_compare, NULL);
+    //Yield in case new highest priority
 
-//   // if(list_empty(&thread_current()->possibledonors) ||
-//   //   new_priority > thread_current()->priority){
-//   //   thread_current()->priority = new_priority;
-//   //   thread_current()->oldpriority = new_priority;
-//   // }
-//   // else{
-//   //     thread_current()->priority = new_priority;
-//   // }
-
-// 	//Update ready list due to changed priority;
-// 	list_sort(&ready_list, &thread_compare, NULL);
-
-//   //intr_set_level(old_level);
-
-//   //Yield if new priority is no longer highest priority
-
-	thread_current()->priority = new_priority;
-	//Update ready list due to changed priority;
-	list_sort(&ready_list, &thread_compare, NULL);
-	// Yield in case new highest priority
-    if(!list_empty(&ready_list) &&
-    list_entry(list_front(&ready_list), struct thread,elem)->priority >
-    thread_current()->priority)
-    	thread_yield();
-
+    thread_yield();
+  }
 }
 
 /* Returns the current thread's priority. */
@@ -387,6 +366,14 @@ int
 thread_get_priority (void) 
 {
   return thread_current ()->priority;
+}
+
+/* Returns current thread's altpriority.
+ * (used for debugging purposes) */
+int
+thread_get_altpriority (void)
+{
+  return thread_current ()->altpriority;
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -506,7 +493,11 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->altpriority = priority;
   t->magic = THREAD_MAGIC;
+  t->blocker = NULL;
+  list_init(&t->locksheld);
+  sema_init(&(t->sema),0);
   
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
