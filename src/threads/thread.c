@@ -365,12 +365,16 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current()->priority = new_priority;
-  //Update ready list due to changed priority;
-  list_sort(&ready_list, &thread_compare, NULL);
-  //Yield in case new highest priority
+  thread_current()->altpriority = new_priority;
 
-  thread_yield();
+  if(thread_current()->haslocks == 0) {
+    thread_current()->priority = new_priority;
+    //Update ready list due to changed priority;
+    list_sort(&ready_list, &thread_compare, NULL);
+    //Yield in case new highest priority
+
+    thread_yield();
+  }
 }
 
 /* Returns the current thread's priority. */
@@ -378,6 +382,14 @@ int
 thread_get_priority (void) 
 {
   return thread_current ()->priority;
+}
+
+/* Returns current thread's altpriority.
+ * (used for debugging purposes) */
+int
+thread_get_altpriority (void)
+{
+  return thread_current ()->altpriority;
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -497,6 +509,8 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->altpriority = priority;
+  t->haslocks = 0;
   t->magic = THREAD_MAGIC;
   t->blocker = NULL;
 

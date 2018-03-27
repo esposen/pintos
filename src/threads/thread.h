@@ -89,6 +89,8 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    int altpriority;                    /* Saves priority when a lock is held */
+    int haslocks;                       /* Number of locks the thread currently holds */
     struct list_elem allelem;           /* List element for all threads list. */
     struct list_elem sleepelem;         /* List element for sleep threads list. */
 
