@@ -231,7 +231,6 @@ thread_create (const char *name, int priority,
 		//enum intr_level old_level;
 		thread_yield();
   }
-  t->blocker = NULL;
 
   return tid;
 }
@@ -499,6 +498,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+  t->blocker = NULL;
 
   sema_init(&(t->sema),0);
   

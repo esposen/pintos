@@ -204,17 +204,18 @@ lock_acquire (struct lock *lock)
   // Returns False if can sema_down
   if (!sema_try_down(&lock->semaphore)){
     
-    int curr_pri = thread_current()->priority;
-    int holder_pri = lock->holder->priority;
-    //int i=0;
-    //thread_current()->blocker = t;
-    
-    // for(t = lock->holder; t != NULL; t = t->blocker){}
-    
-    if (curr_pri > holder_pri){ 
-      //MUST DONATE PRIORITY
-      lock->holder->priority = curr_pri;
+    thread_current()->blocker = lock->holder;
+
+    struct thread *t = thread_current();
+
+    while(t->blocker != NULL){
+    	if(t->priority > t->blocker->priority){
+    		t->blocker->priority = t->priority;
+    		t= t->blocker;
+    	}
+    	else break;
     }
+
     sema_down(&lock->semaphore);    
   }
   
