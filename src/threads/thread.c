@@ -316,7 +316,6 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-  	//printf("about to order in yield\n");
   	list_insert_ordered (&ready_list, &cur->elem, &thread_compare, NULL);
   cur->status = THREAD_READY;
   schedule ();
@@ -585,7 +584,6 @@ thread_schedule_tail (struct thread *prev)
 static void
 schedule (void) 
 {
-  //printf("in schedule\n");
   struct thread *cur = running_thread ();
   struct thread *next = next_thread_to_run ();
   struct thread *prev = NULL;
