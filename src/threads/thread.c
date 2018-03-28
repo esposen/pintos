@@ -346,12 +346,20 @@ thread_set_priority (int new_priority)
 
   thread_current()->altpriority = new_priority;
 
+  //Assign new_priortiy to thread_current()->priority if it is higher
+  //Scheduler need not be called in this situation
+  if(new_priority > thread_current()->priority){
+    thread_current()->priority = new_priority;
+    return;
+  }
+  //Don't lower priority if thread_current() has locks
+  // because it might mess up previous priority donations.
   if(list_empty(&thread_current()->locksheld)) {
     thread_current()->priority = new_priority;
     //Update ready list due to changed priority;
     list_sort(&ready_list, &thread_compare, NULL);
+    
     //Yield in case new highest priority
-
     thread_yield();
   }
 }
@@ -491,9 +499,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->altpriority = priority;
   t->magic = THREAD_MAGIC;
   t->blocker = NULL;
-  list_init(&t->locksheld);
-  sema_init(&(t->sema),0);
-  
+  list_init(&t->locksheld);  
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
@@ -612,7 +618,7 @@ allocate_tid (void)
 }
 
 
-/* Compare function for list_sort
+/* Compare function for list_sort (readylist and sema->waiters)
 	 returns true if A > B
 	 Creates list of threads with in decending order
 	 	of priority */
