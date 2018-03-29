@@ -199,11 +199,11 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
-
-  // Returns False if can sema_down
+  enum intr_level old_level;
+  //Check if will block on sema_down()
   if (!sema_try_down(&lock->semaphore)){
     //Save lock for nest donations
-    thread_current()->blocker = lock;\
+    thread_current()->blocker = lock;
     struct thread *t = thread_current();
     //Priority donation, coninue until t is not blocked
     while(t->blocker != NULL){
@@ -215,14 +215,16 @@ lock_acquire (struct lock *lock)
     	}
     	else break;
     }
-
     sema_down(&lock->semaphore);    
   }
-  
+  //Protect this section so no interrupts occur before
+  //  lock->holer is set 
+  old_level = intr_disable();
   // Acquire Lock and save in lock list held by thread
   lock->holder = thread_current ();
   list_push_back(&thread_current()->locksheld, &lock->lockelem);
   thread_current()->blocker = NULL;
+  intr_set_level(old_level);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -256,7 +258,8 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-
+  enum intr_level old_level;
+  old_level = intr_disable();
   list_remove(&lock->lockelem);
 
   struct thread *curthread = thread_current();
@@ -292,6 +295,7 @@ lock_release (struct lock *lock)
   	curthread->priority = highestpriority;
   }
   lock->holder = NULL;
+  intr_set_level(old_level);
   sema_up (&lock->semaphore);
 }
 

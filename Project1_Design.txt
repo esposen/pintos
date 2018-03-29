@@ -1,0 +1,152 @@
+CMSC 326
+Design Document for Project #1: Alarms and Priority Scheduling with Priority Donation
+Due: 28.March.2018
+
+---- GROUP ----
+
+Andrew Carlson	 <ac7303@bard.edu}
+Elias Posen		 <ep2851@bard.edu}
+Malcolm Gilbert	 <mg3128@bard.edu}
+
+
+---- PRELIMINARIES ----
+
+Some obstacles were overcome following conversations with Sascha Fedchin and Rachel Nalecz.
+
+---- DATA STRUCTURES ----
+
+Copy here the declaration of each new or changed `struct' or `struct' member, global or static variable, `typedef', or enumeration.  Identify the purpose of each in 25 words or less.  Precede each by its directory and file name.
+
+src/threads/synch.h (SAMPLE)
+A "latch" is a new synchronization primitive.  Acquires block until the first release.  Afterward, all ongoing and future acquires pass immediately.
+
+    /* Latch. */
+    struct latch 
+      {
+        bool released;              /* Released yet? */
+        struct lock monitor_lock;   /* Monitor lock. */
+        struct condition rel_cond;  /* Signaled when released. */
+      };
+
+src/threads/thread.h
+
+The following was added to struct thread:
+	
+	struct thread
+	{
+		...
+		int altpriority;				  /* Saves priority when a lock is held, is different from priority when donation has occurred */
+		struct list_elem sleepelem;		  /* List element for sleeping threads list */
+		struct list locksheld;			  /* List of locks held by thread */
+		struct lock *blocker;             /* Lock which is blocking this thread */
+		int waketick;                     /* Tick at which thread should wake */
+		...
+	};
+
+src/devices/timer.c
+
+The following global variable was added:
+
+	struct list sleeping_list;			/* List of all threads currently sleeping */
+
+src/threads/synch.h
+
+The following was added to struct lock:
+
+	struct lock
+	{
+		...
+		struct list_elem lockelem;		/*List element used in thread->locksheld list */
+		...
+	};
+
+src/threads/synch.c
+
+The following was added to struct semaphore_elem:
+	
+	struct semaphore_elem
+	{
+		...
+		struct thread *t;				/* Thread blocked by semaphore in semaphore_elem */
+		...
+	}
+
+---- ALGORITHMS ----
+
+How is priority scheduling implemented?  Refer critical data structures and the procedures where they are modified.
+
+	The primary alteration for implementing priority scheduling was changing the ready list to a sorted list. In thread_unblock() and thread_yield() (in thread.c), when a thread is added to the ready list, the function list_insert_ordered is used with the thread_compare() function, as opposed to using list_push_back(). thread_compare() is defined in thread.c, and ensures a list of threads in descending order. Thus whenever next_thread_to_run() is called by the scheduler, the thread it pops off of the front of the ready list will be the highest priority thread.
+
+		/* Compare function for list_sort
+		returns true if A > B
+		Creates list of threads with in decending order
+	 	of priority */
+		bool thread_compare(const struct list_elem *a,
+		                     const struct list_elem *b,
+		                     void *aux){
+			struct thread *threadA = list_entry(a, struct thread, elem);
+			struct thread *threadB = list_entry(b, struct thread, elem);
+
+			if(threadA->priority > threadB->priority)
+				return true;
+
+			return false;
+		}
+
+	Additionally, in thread_set_priority, after a thread's priority is changed the ready list is sorted again, and the current thread yields to call the scheduler, in case it is no longer the highest priority.
+
+	Whenever a thread is created, in thread_create(), its priority is checked against the priority of the current running thread, causing the current running thread to yield if the new thread has a higher priority.
+
+	To implement priority scheduling for semaphores, the sema->waiters list is sorted in sema_up() (src/threads/synch.c) prior to the unblocking of the first thread in sema->waiters. The insertion of threads into sema->waiters is not done in an ordered fashion as the priority of the waiting threads may change (due to priority donation) while in sema->waiters.
+
+	Similarly, for condition variables, the list of threads in cond->waiters is sorted in cond_signal() (in synch.c) prior to doing a sema_up() on the semaphore associated with the first entry of cond->waiters. This sort uses a slightly different comparison function, cond_compare(), which is defined in synch.c, and also ensures a list of threads sorted in descending order.
+
+Briefly describe your implementation of lock_acquire.
+
+	If a thread attempts to acquire a lock that is already held by another thread, it will save a reference to the lock that it is blocked under. Following this, priority donation is initiated. This is implemented by comparing the priority of the lock holder against the current thread, donating if the current thread has a higher priority than the lock holder. Following any donation, nested donations are addressed, which is described in more detail in the section below. Then, the waiting thread does a sema_down() on the lock's semaphore, which blocks the thread until the lock holder completes a lock_release().
+
+	Upon acquiring a lock (semaphore associated with a lock becomes zero), the thread sets itself as the lock holder, and appends a reference to the lock it now holds in its locksheld list.
+
+Briefly describe your implementation of lock_release.
+
+	Initially, the thread will remove the lock it is releasing from its locksheld list. Then, the thread will check if it still holds any other locks. If this is true, the thread compares its priority prior to any donation (stored in altpriority) with the priorities of all threads waiting on locks held by the current thread, saving the highest priority as the current thread's new priority. If no locks are held by the current thread, then its priority is reverted to what it was prior to any donation.
+
+How do you deal with multiple locks?
+
+	When a thread acquires a lock, it appends a reference to that lock in the thread's locksheld list. By doing so, we ensure that the thread's priority is reset correctly within lock_release() as mentioned above.
+
+How do you deal with nested locks?
+
+	When a thread is blocked on a lock in lock_acquire(), it enters the donation while loop which checks if the lock holder is blocked on another lock. If so, the thread donates its priority to the lock holder if necessary, otherwise it breaks out of the loop. If donation occurs, the loop moves one level lower, checking if the current thread's lock holder has a lock that it is blocked under, and repeats the same process until either the holder does not exist or the holder has a higher priority than the thread it is blocking. This can be explained more simply by showing the while loop itself, thread->blocker is the reference to the lock blocking thread:
+
+		struct thread *t = thread_current();
+
+		while (t->blocker != NULL){
+			if(t->priority > t->blocker->holder->priority){
+				t->blocker->holder->priority = t->priority;
+				//move one level lower
+				t = t->blocker->holder;
+			}
+			//Donation is not needed
+			else break;
+		}
+
+
+
+
+---- SYNCHRONIZATION ----
+
+How do you avoid race conditions within lock_acquire and lock_release?
+
+	In both cases, interrupts are disabled upon entering critical sections and are re-enabled upon exiting these same critical sections.
+
+
+
+---- RATIONALE ----
+
+Critique your design, pointing out advantages and disadvantages in
+your design choices.
+
+	The advantage of a thread holding a reference to the lock it is blocked under---rather than to the thread holding the lock---is that the holder of the lock may change, in which case we would have to update the lock holder pointer within all the waiting threads. However, by holding a reference to the lock (which does not change) we can just update the lock's holder once within the lock itself, allowing all waiting threads to have a reference to the updated holder through the lock immediately.
+
+	thread_set_priority() in thread.c has both advantages and disadvantages. If a thread is holding one or more locks, then it will only change its priority if the new priority is higher than its current priority. This ensures that a priority that has been donated to a lock holder cannot be decremented while the lock is held. Otherwise, the changed priority is stored in altpriority, which the thread reverts to following the release of all of its locks. There is a case in which this implementation ignores new priorities which would not affect donation. For example, if thread A with priority 50 holds the lock, and thread B with priority 30 is waiting on the lock, thread A should be allowed to have its priority decreased as long as it is greater than or equal to the greatest priority of the threads waiting on the lock. Currently, this lower priority is simply saved in altpriority. We do not consider this a serious flaw, however it allows threads to maintain a higher priority than intended or required for priority donation to function.
