@@ -1,11 +1,11 @@
 CMSC 326
 Design Document for Project #1: Alarms and Priority Scheduling with Priority Donation
-Due: 28.March.2018
+Due: 30.March.2018
 
 ---- GROUP ----
 
 Andrew Carlson	 <ac7303@bard.edu}
-Elias Posen		 <ep2851@bard.edu}
+Elias Posen	 <ep2851@bard.edu}
 Malcolm Gilbert	 <mg3128@bard.edu}
 
 
@@ -15,42 +15,26 @@ Some obstacles were overcome following conversations with Sascha Fedchin and Rac
 
 ---- DATA STRUCTURES ----
 
-Copy here the declaration of each new or changed `struct' or `struct' member, global or static variable, `typedef', or enumeration.  Identify the purpose of each in 25 words or less.  Precede each by its directory and file name.
-
-src/threads/synch.h (SAMPLE)
-A "latch" is a new synchronization primitive.  Acquires block until the first release.  Afterward, all ongoing and future acquires pass immediately.
-
-    /* Latch. */
-    struct latch 
-      {
-        bool released;              /* Released yet? */
-        struct lock monitor_lock;   /* Monitor lock. */
-        struct condition rel_cond;  /* Signaled when released. */
-      };
-
 src/threads/thread.h
-
 The following was added to struct thread:
 	
 	struct thread
 	{
 		...
-		int altpriority;				  /* Saves priority when a lock is held, is different from priority when donation has occurred */
-		struct list_elem sleepelem;		  /* List element for sleeping threads list */
-		struct list locksheld;			  /* List of locks held by thread */
-		struct lock *blocker;             /* Lock which is blocking this thread */
-		int waketick;                     /* Tick at which thread should wake */
+		int altpriority;			/* Saves priority when a lock is held, is different from priority when donation has occurred */
+		struct list_elem sleepelem;		/* List element for sleeping threads list */
+		struct list locksheld;			/* List of locks held by thread */
+		struct lock *blocker;             	/* Lock which is blocking this thread */
+		int waketick;                     	/* Tick at which thread should wake */
 		...
 	};
 
 src/devices/timer.c
-
 The following global variable was added:
 
 	struct list sleeping_list;			/* List of all threads currently sleeping */
 
 src/threads/synch.h
-
 The following was added to struct lock:
 
 	struct lock
@@ -61,25 +45,22 @@ The following was added to struct lock:
 	};
 
 src/threads/synch.c
-
 The following was added to struct semaphore_elem:
 	
 	struct semaphore_elem
 	{
 		...
-		struct thread *t;				/* Thread blocked by semaphore in semaphore_elem */
+		struct thread *t;			/* Thread blocked by semaphore in semaphore_elem */
 		...
 	}
 
----- ALGORITHMS ----
+---- ALGORITHMS ——
 
-How is priority scheduling implemented?  Refer critical data structures and the procedures where they are modified.
-
-	The primary alteration for implementing priority scheduling was changing the ready list to a sorted list. In thread_unblock() and thread_yield() (in thread.c), when a thread is added to the ready list, the function list_insert_ordered is used with the thread_compare() function, as opposed to using list_push_back(). thread_compare() is defined in thread.c, and ensures a list of threads in descending order. Thus whenever next_thread_to_run() is called by the scheduler, the thread it pops off of the front of the ready list will be the highest priority thread.
+	The primary alteration for implementing priority scheduling was changing the ready list to a sorted list. In thread_unblock() and thread_yield() (in thread.c), when a thread is added to the ready list, the function list_insert_ordered is used with the thread_compare() function, as opposed to using list_push_back(). thread_compare() is defined in thread.c, and ensures a list of threads in descending priority order. Thus whenever next_thread_to_run() is called by the scheduler, the thread it pops off of the front of the ready list will be the highest priority thread.
 
 		/* Compare function for list_sort
 		returns true if A > B
-		Creates list of threads with in decending order
+		Creates list of threads with in descending order
 	 	of priority */
 		bool thread_compare(const struct list_elem *a,
 		                     const struct list_elem *b,
@@ -141,11 +122,12 @@ How do you avoid race conditions within lock_acquire and lock_release?
 	In both cases, interrupts are disabled upon entering critical sections and are re-enabled upon exiting these same critical sections.
 
 
-
 ---- RATIONALE ----
 
 Critique your design, pointing out advantages and disadvantages in
 your design choices.
+
+	In timer_sleep(), we had the option to put the list of sleeping threads under thread.c or timer.c. We ultimately chose timer.c as this allowed timer.c to keep track of all the sleeping threads, and used less less lines of code as no helper functions were needed. One disadvantage however is that it’s dissimilar to the pintos design, where most of the lists of threads are held by thread.c to manage. 
 
 	The advantage of a thread holding a reference to the lock it is blocked under---rather than to the thread holding the lock---is that the holder of the lock may change, in which case we would have to update the lock holder pointer within all the waiting threads. However, by holding a reference to the lock (which does not change) we can just update the lock's holder once within the lock itself, allowing all waiting threads to have a reference to the updated holder through the lock immediately.
 
