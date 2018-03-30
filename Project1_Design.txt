@@ -127,7 +127,7 @@ How do you avoid race conditions within lock_acquire and lock_release?
 Critique your design, pointing out advantages and disadvantages in
 your design choices.
 
-	In timer_sleep(), we had the option to put the list of sleeping threads under thread.c or timer.c. We ultimately chose timer.c as this allowed timer.c to keep track of all the sleeping threads, and used less less lines of code as no helper functions were needed. One disadvantage however is that it’s dissimilar to the pintos design, where most of the lists of threads are held by thread.c to manage. 
+	In timer_sleep(), we had the option to put the list of sleeping threads under thread.c or timer.c. We ultimately chose timer.c as this allowed timer.c to keep track of all the sleeping threads, and used less lines of code as no helper functions were needed. One disadvantage however is that it’s dissimilar to the pintos design, where most of the lists of threads are held by thread.c to manage. 
 
 	The advantage of a thread holding a reference to the lock it is blocked under---rather than to the thread holding the lock---is that the holder of the lock may change, in which case we would have to update the lock holder pointer within all the waiting threads. However, by holding a reference to the lock (which does not change) we can just update the lock's holder once within the lock itself, allowing all waiting threads to have a reference to the updated holder through the lock immediately.
 
