@@ -4,6 +4,8 @@
 
 - All alarm, priority, and priority donation tests have been passed.
 
+- For more information on implementation decisions and overview of alterations made to basic Pintos, see \Project1_Design.txt
+
 ## Usage
 
 Clone this branch and follow the [Getting Started](https://web.stanford.edu/class/cs140/projects/pintos/pintos_1.html) guidlines to set up pintos on your system.
