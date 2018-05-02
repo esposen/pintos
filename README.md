@@ -6,7 +6,7 @@
 
 ## Usage
 
-Follow the [Getting Started](https://web.stanford.edu/class/cs140/projects/pintos/pintos_1.html) to set up pintos on your system.
+Clone this branch and follow the [Getting Started](https://web.stanford.edu/class/cs140/projects/pintos/pintos_1.html) guidlines to set up pintos on your system.
 
 Run the following commands to run aformentioned tests:
 
