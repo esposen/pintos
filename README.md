@@ -1,9 +1,16 @@
-# pintos-anon
+# Pintos Project 1
 
-Latest version from Stanford repo. used in CMSC 326 at Bard College.
+- Latest version from Stanford repo. used in CMSC 326 - Operating Systems at Bard College.
 
-All alarm, priority, and priority donation tests have been passed.
+- All alarm, priority, and priority donation tests have been passed.
 
-Run  ./project1tests.sh in src/threads to run all aformentioned tests.
+## Usage
 
-(may need to gain permisson by executing: chmod 755 project1tests.sh)
+Follow the [Getting Started](https://web.stanford.edu/class/cs140/projects/pintos/pintos_1.html) to set up pintos on your system.
+
+Run the following commands to run aformentioned tests:
+
+    $ cd src/threads
+    $ chmod 755 project1tests.sh
+    $ ./project1tests.sh
+ 
